@@ -16,10 +16,9 @@ func main() {
 		return
 	}
 
-	var wg sync.WaitGroup
-
 	engine := alerts.NewEngine(client)
 
+	var wg sync.WaitGroup
 	for _, alert := range alertList {
 		wg.Add(1)
 
