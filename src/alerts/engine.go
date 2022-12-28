@@ -7,62 +7,6 @@ import (
 	"time"
 )
 
-type Engine interface {
-	Run(alert *Alert) error
-}
-
-type engine struct {
-	client Client
-}
-
-func NewEngine(client_ Client) *engine {
-	return &engine{
-		client: client_,
-	}
-}
-
-type alertStateInfo struct {
-	PreviousState string
-	Timestamp     int64
-}
-
-//func AlertService(node *alertStateInfo, client *alerts.Client) {
-//	currentState := getCurrentState((*node).Data, *client)
-//
-//	if currentState == "PASS" {
-//		fmt.Printf("%v ; %v ; [%v -> %v] ; %v\n", node.Data.Query, currentState, node.PreviousState, currentState, time.Now().Unix())
-//		if node.PreviousState != "PASS" {
-//			node.PreviousState = currentState
-//			node.Timestamp = time.Now().Unix()
-//			fmt.Printf("Resolving %v! \t Next alert at %v(from %v)\n", node.Data.Query, node.Timestamp, time.Now().Unix())
-//
-//			err := (*client).Resolve(context.Background(), node.Data.Name)
-//			if err != nil {
-//				fmt.Println("Line 24: ", err)
-//			}
-//		}
-//	} else if currentState == "WARN" || currentState == "CRITICAL" {
-//		fmt.Printf("%v ; %v ; [%v -> %v] ; %v\n", node.Data.Query, currentState, node.PreviousState, currentState, time.Now().Unix())
-//		if currentState != node.PreviousState || time.Now().Unix()-node.Timestamp > node.Data.RepeatIntervalSecs {
-//			node.PreviousState = currentState
-//			node.Timestamp = time.Now().Unix()
-//			fmt.Printf("Sending ALERT %v! \t Next alert at %v(from %v)\n", node.Data.Query, node.Timestamp, time.Now().Unix())
-//
-//			message := node.Data.Warn.Message
-//			if currentState == "CRITICAL" {
-//				message = node.Data.Critical.Message
-//			}
-//
-//			err := (*client).Notify(context.Background(), node.Data.Name, message)
-//			if err != nil {
-//				fmt.Println("Line 43: ", err)
-//			}
-//		}
-//	}
-//	time.Sleep(time.Second * time.Duration(node.Data.IntervalSecs))
-//	AlertService(node, client)
-//}
-
 func (_engine engine) Run(alert *Alert) {
 	alertState := alertStateInfo{PreviousState: "PASS", Timestamp: time.Now().Unix()}
 
@@ -126,7 +70,7 @@ func (_engine engine) notify(alertState *alertStateInfo, alert *Alert, currentSt
 
 	err := _engine.client.Notify(context.Background(), alert.Name, message)
 	for i := 0; i < 2 && err != nil; i++ {
-		fmt.Printf("Retrying resolving %v", alert.Name)
+		fmt.Printf("Retrying notifying %v", alert.Name)
 		err = _engine.client.Notify(context.Background(), alert.Name, message)
 	}
 	return err
@@ -134,8 +78,12 @@ func (_engine engine) notify(alertState *alertStateInfo, alert *Alert, currentSt
 
 func (_engine engine) getCurrentState(alert *Alert) string {
 	queryResponse, err := _engine.client.Query(context.Background(), alert.Query)
+	for i := 0; i < 2 && err != nil; i++ {
+		fmt.Printf("Retrying getting current state %v", alert.Name)
+		queryResponse, err = _engine.client.Query(context.Background(), alert.Query)
+	}
 	if err != nil {
-		log.Printf("Line 71: %v %v\n", err, alert.Name)
+		log.Printf("Line 86: %v %v\n", err, alert.Name)
 	}
 
 	currentValue := queryResponse
