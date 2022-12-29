@@ -124,7 +124,7 @@ func (_engine engine) retryHelper(parameter string, alert *Alert, message string
 		if !shouldRetry(err) {
 			break
 		}
-		fmt.Printf("Retrying %v", alert.Name)
+		fmt.Printf("Retrying %v\n", alert.Name)
 	}
 	return queryResponse, err
 }
