@@ -76,7 +76,7 @@ func (_engine engine) process(alert *Alert, alertState *alertStateInfo) error {
 func (_engine engine) resolve(alertState *alertStateInfo, alert *Alert, currentState string) error {
 	*alertState = alertStateInfo{PreviousState: currentState, Timestamp: time.Now().Unix()}
 	fmt.Printf("Resolving %v! \t Next alert at %v(from %v)\n", alert.Query, alertState.Timestamp, time.Now().Unix())
-	_, err := _engine.retryHelper(RESOLVE, alert, "")
+	_, err := _engine.sendAlert(RESOLVE, alert, "")
 	return err
 }
 
@@ -89,12 +89,12 @@ func (_engine engine) notify(alertState *alertStateInfo, alert *Alert, currentSt
 		message = alert.Critical.Message
 	}
 
-	_, err := _engine.retryHelper(NOTIFY, alert, message)
+	_, err := _engine.sendAlert(NOTIFY, alert, message)
 	return err
 }
 
 func (_engine engine) getCurrentState(alert *Alert) string {
-	queryResponse, err := _engine.retryHelper(QUERY, alert, "")
+	queryResponse, err := _engine.sendAlert(QUERY, alert, "")
 
 	if err != nil {
 		log.Printf("Error while extracting CurrentState: %v %v\n", err, alert.Name)
@@ -109,7 +109,7 @@ func (_engine engine) getCurrentState(alert *Alert) string {
 	return CRITICAL
 }
 
-func (_engine engine) retryHelper(parameter string, alert *Alert, message string) (float32, error) {
+func (_engine engine) sendAlert(parameter string, alert *Alert, message string) (float32, error) {
 	var err error
 	var queryResponse float32
 	for attempt := retry.Start(getRetryStrategy(), nil); attempt.Next(); {
